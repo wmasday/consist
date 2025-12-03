@@ -1,0 +1,9 @@
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const Team = sequelize.define('Team', {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    name: { type: DataTypes.STRING(100) },
+});
+
+module.exports = Team;
