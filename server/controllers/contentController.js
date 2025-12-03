@@ -1,12 +1,22 @@
 const Content = require('../models/content');
 const ContentAI = require('../models/content_ai');
 const deepseek = require('../utils/deepseekClient');
+const User = require('../models/user');
 
 module.exports = {
     getOwnContents: async (req, res) => {
         try {
-            const user_id = req.user.id;
-            const contents = await Content.findAll({ where: { user_id } });
+            const { id: user_id, role } = req.user;
+
+            let contents;
+            if (role === 'manager') {
+                contents = await Content.findAll({
+                    include: [{ model: User, attributes: ['id', 'full_name', 'email', 'team_id'] }]
+                });
+            } else {
+                contents = await Content.findAll({ where: { user_id } });
+            }
+
             res.json(contents);
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -15,8 +25,20 @@ module.exports = {
 
     getOne: async (req, res) => {
         try {
-            const user_id = req.user.id;
-            const content = await Content.findOne({ where: { id: req.params.id, user_id } });
+            const { id: user_id, role } = req.user;
+
+            const where = role === 'manager'
+                ? { id: req.params.id }
+                : { id: req.params.id, user_id };
+
+            const content = await Content.findOne({
+                where,
+                include: [{
+                    model: ContentAI,
+                    as: 'ai_logs',
+                    attributes: ['id', 'type', 'ai_response', 'createdAt']
+                }]
+            });
 
             if (!content) return res.status(404).json({ message: 'Content not found or not yours' });
             res.json(content);
@@ -31,7 +53,6 @@ module.exports = {
             const user_id = req.user.id;
             const { title, description, deadline, status } = req.body;
 
-            // Create content
             const content = await Content.create({
                 user_id,
                 title,
@@ -44,7 +65,6 @@ module.exports = {
                 `Title: ${title}\nDescription: ${description}`
             );
 
-            // Save AI response
             await ContentAI.create({
                 user_id,
                 content_id: content.id,
@@ -65,11 +85,13 @@ module.exports = {
 
     update: async (req, res) => {
         try {
-            const user_id = req.user.id;
+            const { id: user_id, role } = req.user;
 
-            const content = await Content.findOne({
-                where: { id: req.params.id, user_id }
-            });
+            const where = role === 'manager'
+                ? { id: req.params.id }
+                : { id: req.params.id, user_id };
+
+            const content = await Content.findOne({ where });
 
             if (!content) return res.status(404).json({ message: 'Content not found or not yours' });
 
@@ -98,11 +120,13 @@ module.exports = {
 
     delete: async (req, res) => {
         try {
-            const user_id = req.user.id;
+            const { id: user_id, role } = req.user;
 
-            const content = await Content.findOne({
-                where: { id: req.params.id, user_id }
-            });
+            const where = role === 'manager'
+                ? { id: req.params.id }
+                : { id: req.params.id, user_id };
+
+            const content = await Content.findOne({ where });
 
             if (!content) return res.status(404).json({ message: 'Content not found or not yours' });
 

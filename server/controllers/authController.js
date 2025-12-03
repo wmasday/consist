@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 module.exports = {
     register: async (req, res) => {
         try {
-            const { full_name, email, password, team_id } = req.body;
+            const { full_name, email, password, team_id, role } = req.body;
 
             const existing = await User.findOne({ where: { email } });
             if (existing) return res.status(400).json({ message: 'Email already exists' });
@@ -16,10 +16,19 @@ module.exports = {
                 full_name,
                 email,
                 password: hashed,
-                team_id
+                team_id,
+                role: role === 'manager' ? 'manager' : 'member'
             });
 
-            return res.json({ message: 'Registered successfully', user });
+            const safeUser = {
+                id: user.id,
+                full_name: user.full_name,
+                email: user.email,
+                team_id: user.team_id,
+                role: user.role
+            };
+
+            return res.json({ message: 'Registered successfully', user: safeUser });
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
@@ -35,9 +44,24 @@ module.exports = {
             const match = await bcrypt.compare(password, user.password);
             if (!match) return res.status(400).json({ message: 'Wrong password' });
 
-            const token = jwt.sign({ id: user.id, email: user.email }, 'SECRETKEY', { expiresIn: '1d' });
+            const payload = {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                team_id: user.team_id
+            };
 
-            return res.json({ message: 'Login successful', token });
+            const token = jwt.sign(payload, 'SECRETKEY', { expiresIn: '1d' });
+
+            const safeUser = {
+                id: user.id,
+                full_name: user.full_name,
+                email: user.email,
+                team_id: user.team_id,
+                role: user.role
+            };
+
+            return res.json({ message: 'Login successful', token, user: safeUser });
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }

@@ -3,6 +3,12 @@ const Team = require('../models/team');
 module.exports = {
     getAll: async (req, res) => {
         try {
+            const requester = req.user;
+
+            if (requester.role !== 'manager') {
+                return res.status(403).json({ message: 'Only manager can view teams' });
+            }
+
             const teams = await Team.findAll();
             res.json(teams);
         } catch (err) {
@@ -12,6 +18,12 @@ module.exports = {
 
     getOne: async (req, res) => {
         try {
+            const requester = req.user;
+
+            if (requester.role !== 'manager') {
+                return res.status(403).json({ message: 'Only manager can view teams' });
+            }
+
             const team = await Team.findByPk(req.params.id);
             if (!team) return res.status(404).json({ message: 'Team not found' });
             res.json(team);
@@ -22,6 +34,11 @@ module.exports = {
 
     create: async (req, res) => {
         try {
+            const requester = req.user;
+            if (requester.role !== 'manager') {
+                return res.status(403).json({ message: 'Only manager can create teams' });
+            }
+
             const { name } = req.body;
             const team = await Team.create({ name });
             res.json({ message: 'Team created', team });
@@ -32,6 +49,11 @@ module.exports = {
 
     update: async (req, res) => {
         try {
+            const requester = req.user;
+            if (requester.role !== 'manager') {
+                return res.status(403).json({ message: 'Only manager can update teams' });
+            }
+
             const team = await Team.findByPk(req.params.id);
             if (!team) return res.status(404).json({ message: 'Team not found' });
 
@@ -44,6 +66,11 @@ module.exports = {
 
     delete: async (req, res) => {
         try {
+            const requester = req.user;
+            if (requester.role !== 'manager') {
+                return res.status(403).json({ message: 'Only manager can delete teams' });
+            }
+
             const team = await Team.findByPk(req.params.id);
             if (!team) return res.status(404).json({ message: 'Team not found' });
 
